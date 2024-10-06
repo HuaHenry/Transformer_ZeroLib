@@ -1,34 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-@File    :   components.py
-@Time    :   2024/10/06 16:26:39
+@File    :   Attention.py
+@Time    :   2024/10/06 20:46:29
 @Author  :   Zhouqi Hua 
 @Version :   1.0
-@Desc    :   Transformer的组成部件
+@Desc    :   手写实现自注意力计算；实现多头注意力模块
 '''
 
 import torch
 import torch.nn as nn
 import math
 
-# 调用工具函数文件 utils.py
-from utils import LayerNorm
-
-"""
-残差块和层归一化（LN）块的结合，用于构建Transformer的中的ADD+LN结构
-"""
-class ResNormBlock(nn.Module):
-    def __init__(self, dim, dropout=0.1):
-        super(ResNormBlock, self).__init__()
-        # 首先实现 LayerNorm
-        self.norm = LayerNorm(dim)
-        # 接着实现 dropout
-        self.dropout = nn.Dropout(p=dropout)
-
-    def forward(self, x, sublayer):
-        # x + sublayer(x) 实现残差连接
-        return self.dropout(self.layer_norm(x + sublayer(x)))
-    
 """
 自注意力计算函数
 """
@@ -36,17 +18,19 @@ def self_attention(query, key, value, mask=None, dropout=None):
     # 计算 q 和 k 的相似度得分
     # - torch.matmul：矩阵相乘
     # - transpose(-2, -1)：对最后两个维度进行转置
-    scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(query.size(-1))
+    scores = torch.matmul(query, key.transpose(-2, -1)) / \
+        math.sqrt(query.size(-1))
     # mask 掩码
     if mask is not None:
         mask.cuda()
-        scores = scores.masked_fill(mask==0, -1e9)
+        scores = scores.masked_fill(mask == 0, -1e9)
     # 计算掩码后的 self-attention
-    self_atten = nn.functional.softmax(scores, dim = -1)
+    self_atten = nn.functional.softmax(scores, dim=-1)
     if dropout is not None:
         self_atten = dropout(self_atten)
     # 自注意力得分计算（返回加权和和 self-attention）
     return torch.matmul(self_atten, value), self_atten
+
 
 """
 多头注意力机制类（Multi-Head Attention）
@@ -87,17 +71,17 @@ class MHA(nn.Module):
         # 多头切分的核心：dim_model -> head_num * dim_perhead
         # - 参数 -1：表示自动计算该维度大小，使得总元素个数不变
         # - transpose(1,2)：交换第2/3维，即转化为为 [n_batch, head_num, seq_len, dim_perhead]
-        q = self.linear_q(q).view(n_batches, -1, self.head_num, self.dim_perhead).transpose(1, 2)
-        k = self.linear_k(k).view(n_batches, -1, self.head_num, self.dim_perhead).transpose(1, 2)
-        v = self.linear_v(v).view(n_batches, -1, self.head_num, self.dim_perhead).transpose(1, 2)
+        q = self.linear_q(q).view(n_batches, -1, self.head_num,
+                                  self.dim_perhead).transpose(1, 2)
+        k = self.linear_k(k).view(n_batches, -1, self.head_num,
+                                  self.dim_perhead).transpose(1, 2)
+        v = self.linear_v(v).view(n_batches, -1, self.head_num,
+                                  self.dim_perhead).transpose(1, 2)
         # 调用 self_attention 函数计算多头注意力
         x, self_atten = self_attention(q, k, v, mask, self.dropout, mask)
         # 维度恢复：[n_batch, head_num, seq_len, dim_perhead] -> [n_batch, seq_len, dim_model]
-        x = x.transpose(1, 2).contiguous().view(n_batches, -1, self.head_num * self.dim_perhead)
+        x = x.transpose(1, 2).contiguous().view(
+            n_batches, -1, self.head_num * self.dim_perhead)
         # 最后层线性变换
         return self.linear_f(x)
-
-
-
-
 
