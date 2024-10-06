@@ -8,6 +8,7 @@
 '''
 
 import torch.nn as nn
+from utils import LayerNorm
 
 """
 posion-wise feed forward network模块
@@ -20,7 +21,7 @@ class FFN(nn.Module):
         # 线性变换
         self.linear1 = nn.Linear(dim_model, dim_ffn)
         self.linear2 = nn.Linear(dim_ffn, dim_model)
-        self.layer_norm = nn.LayerNorm(dim_model, eps=1e-6)
+        self.layer_norm = LayerNorm(dim_model, eps=1e-6)
         self.dropout = nn.Dropout(p=dropout)    # 也可以区分两个dropout
         self.relu = nn.ReLU()
         
