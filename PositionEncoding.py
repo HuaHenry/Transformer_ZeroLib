@@ -53,7 +53,3 @@ class PositionEncoding(nn.Module):
         else:
             x = x + self.PE[step, :]
         return self.dropout(x)
-        
-        
-    
-
