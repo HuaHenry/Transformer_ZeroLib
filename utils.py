@@ -10,6 +10,7 @@
 import torch
 import torch.nn as nn
 import copy
+import math
 
 """
 层归一化函数，用于构建Transformer的中的LN结构
@@ -35,3 +36,20 @@ class LayerNorm:
 """
 def cloneModule(module, N):
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
+
+"""
+WordEmbedding 词向量构造
+"""
+class WordEmbd(nn.Module):
+    def __init__(self, vocab_size, dim_model):
+        super(WordEmbd, self).__init__()
+        """
+        作用：将 vocab_size 个词映射每一个都映射到 dim_model 向量维度
+        - vocab_size: 词汇表大小（字典长度）
+        - dim_model: 词向量维度
+        """
+        self.embd = nn.Embedding(vocab_size, dim_model)
+        self.dim_model = dim_model
+        
+    def forward(self, x):
+        return self.embd(x) * math.sqrt(self.dim_model)
